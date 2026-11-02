@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AIGC 宇宙 · 观测站</title>
+<style>
+  :root {
+    --bg:#080b16; --deep:#05060d; --panel:rgba(18,24,44,.72); --line:#232c4e;
+    --ink:#e9e7f2; --dim:#8f96b3; --faint:#5a6080;
+    --gold:#b8860b; --goldhi:#e3b23c; --blue:#3d8bd6; --bluehi:#6ab0ee; --red:#d94f4f;
+    --mono:'SF Mono','Menlo','Consolas',monospace;
+    --serif:Georgia,'Songti SC','Noto Serif SC',serif;
+  }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--bg); color:var(--ink);
+    font:15px/1.75 -apple-system,'PingFang SC','Microsoft YaHei',sans-serif; overflow-x:hidden; }
+  body::before { content:""; position:fixed; inset:0; z-index:-2;
+    background: radial-gradient(1200px 800px at 75% -10%, rgba(61,139,214,.10), transparent 60%),
+      radial-gradient(900px 600px at -10% 110%, rgba(184,134,11,.07), transparent 60%), var(--bg); }
+  body::after { content:""; position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:.5;
+    background-image:
+      radial-gradient(1px 1px at 12% 22%, #cdd6ff 40%, transparent 41%),
+      radial-gradient(1px 1px at 34% 8%, #aab6e8 40%, transparent 41%),
+      radial-gradient(1.5px 1.5px at 58% 30%, #e8ecff 40%, transparent 41%),
+      radial-gradient(1px 1px at 78% 12%, #97a3d6 40%, transparent 41%),
+      radial-gradient(1px 1px at 90% 44%, #c9d2f5 40%, transparent 41%),
+      radial-gradient(1.5px 1.5px at 6% 66%, #bfc9ee 40%, transparent 41%),
+      radial-gradient(1px 1px at 44% 82%, #a8b3e0 40%, transparent 41%),
+      radial-gradient(1px 1px at 66% 60%, #d4dbff 40%, transparent 41%);
+    animation:drift 90s linear infinite; }
+  @keyframes drift { from{transform:translateY(0)} to{transform:translateY(-40px)} }
+  header { padding:34px 42px 20px; display:flex; align-items:baseline; gap:18px; flex-wrap:wrap;
+    border-bottom:1px solid var(--line); animation:rise .7s ease both; }
+  @keyframes rise { from{opacity:0; transform:translateY(14px)} to{opacity:1; transform:none} }
+  h1 { font:400 30px/1.2 var(--serif); letter-spacing:.14em; }
+  h1 em { font-style:normal; color:var(--goldhi); }
+  .sub { color:var(--dim); font-size:13px; letter-spacing:.08em; }
+  .rule { flex:1; height:1px; background:linear-gradient(90deg,var(--line),transparent); min-width:60px; }
+  .status { font:12px var(--mono); color:var(--faint); }
+  .status b { color:var(--bluehi); font-weight:400; }
+  main { display:grid; grid-template-columns:480px 1fr; gap:26px; padding:26px 42px 80px; max-width:1500px; }
+  @media (max-width:1080px){ main{grid-template-columns:1fr} }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px 22px;
+    backdrop-filter:blur(6px); animation:rise .7s ease both; }
+  .panel h2 { font:400 13px var(--mono); color:var(--goldhi); letter-spacing:.34em; margin-bottom:14px; }
+  .panel h2 small{ color:var(--faint); letter-spacing:.1em; margin-left:8px; }
+  .scope { position:relative; }
+  .scope canvas { width:100%; aspect-ratio:1; border-radius:10px; background:var(--deep); }
+  .scope .frame { position:absolute; inset:-7px; border:1px solid rgba(184,134,11,.22); border-radius:16px; pointer-events:none; }
+  .scope .frame::before, .scope .frame::after { content:""; position:absolute; width:14px; height:14px; border-color:var(--goldhi); border-style:solid; }
+  .scope .frame::before { top:-1px; left:-1px; border-width:2px 0 0 2px; }
+  .scope .frame::after { bottom:-1px; right:-1px; border-width:0 2px 2px 0; }
+  .tick { position:absolute; color:var(--faint); font:10px var(--mono); letter-spacing:.2em; }
+  .tick.tl{top:-24px;left:0} .tick.tr{top:-24px;right:0}
+  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:14px 0 6px; }
+  .stat { background:rgba(8,11,22,.6); border:1px solid #1c2444; border-radius:10px; padding:10px 8px; text-align:center; transition:border-color .3s; }
+  .stat:hover { border-color:#33406e; }
+  .stat b { display:block; font:400 21px/1.3 var(--mono); color:var(--bluehi); font-variant-numeric:tabular-nums; }
+  .stat.gold b { color:var(--goldhi); }
+  .stat span { font-size:11px; color:var(--faint); letter-spacing:.12em; }
+  .charts { display:grid; gap:8px; margin-top:10px; }
+  .charts .row { display:flex; align-items:center; gap:8px; font:11px var(--mono); color:var(--faint); padding:2px 4px 0; }
+  .charts .row i { width:14px; height:2px; display:inline-block; }
+  canvas.chart { width:100%; height:64px; background:rgba(8,11,22,.5); border-radius:8px; border:1px solid #1a2140; }
+  .ctrl { display:flex; align-items:center; gap:10px; margin:9px 0; }
+  .ctrl label { font-size:12px; color:var(--dim); min-width:58px; letter-spacing:.06em; }
+  .ctrl input[type=range]{ flex:1; accent-color:var(--gold); height:3px; }
+  .ctrl .val { font:12px var(--mono); color:var(--goldhi); min-width:34px; text-align:right; }
+  .btnrow { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  button { background:#161d38; color:var(--ink); border:1px solid #2c3763; border-radius:9px;
+    padding:8px 15px; cursor:pointer; font-size:13px; letter-spacing:.05em; transition:all .22s cubic-bezier(.2,.8,.3,1); }
+  button:hover { background:#1f2950; border-color:#3f4f92; transform:translateY(-1px); box-shadow:0 6px 18px rgba(20,30,70,.5); }
+  button:active { transform:translateY(0); }
+  button.warn { border-color:#5c2d36; color:#f2a9a9; }
+  button.warn:hover { background:#3a1e26; border-color:#8a3d4c; }
+  .hint { font-size:12px; color:var(--faint); margin-top:10px; line-height:1.8; }
+  .hint b { color:var(--dim); font-weight:600; }
+  .law { border:1px solid var(--line); border-radius:11px; margin-bottom:10px; overflow:hidden; transition:border-color .3s; }
+  .law:hover { border-color:#37427a; }
+  .law > summary { cursor:pointer; padding:13px 16px; font:600 14px var(--serif); letter-spacing:.05em; list-style:none; display:flex; align-items:center; gap:10px; }
+  .law > summary::-webkit-details-marker { display:none; }
+  .law > summary::before { content:"§"; font:400 15px var(--mono); color:var(--goldhi); }
+  .law > summary .tag { margin-left:auto; font:10px var(--mono); color:var(--faint); letter-spacing:.15em; }
+  .law pre { white-space:pre-wrap; padding:2px 18px 16px; color:var(--dim); font-size:13px; line-height:1.85; max-height:380px; overflow:auto; border-top:1px dashed #20284a; margin-top:2px; padding-top:12px; }
+  .epoch { border-left:2px solid var(--blue); padding:8px 16px; margin:10px 0; background:rgba(14,20,40,.5); border-radius:0 9px 9px 0; }
+  .epoch summary { cursor:pointer; font:600 13.5px var(--serif); color:var(--goldhi); letter-spacing:.04em; list-style:none; }
+  .epoch summary::-webkit-details-marker{display:none}
+  .epoch pre { white-space:pre-wrap; color:var(--dim); font-size:12.5px; max-height:240px; overflow:auto; margin-top:8px; }
+  .biglink { display:block; text-align:center; padding:16px; border:1px solid #2c3763; border-radius:11px;
+    color:var(--goldhi); text-decoration:none; font-size:14px; letter-spacing:.08em; transition:all .25s; }
+  .biglink:hover { background:#1a2244; border-color:#3f4f92; transform:translateY(-1px); }
+  footer { color:var(--faint); font:12px/2 var(--mono); padding:22px 42px 60px; border-top:1px solid var(--line); letter-spacing:.04em; }
+  ::-webkit-scrollbar { width:9px; height:9px; }
+  ::-webkit-scrollbar-thumb { background:#232c52; border-radius:5px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+</style>
+</head>
+<body>
+<header>
+  <h1>AIGC <em>宇宙</em>观测站</h1>
+  <span class="sub">OBSERVATORY OF A LAWFUL UNIVERSE</span>
+  <div class="rule"></div>
+  <span class="status">ENGINE <b>●IN YOUR BROWSER</b> · 宪章 C1-C5 · 定律 <b id="h-laws">—</b> 条</span>
+</header>
+<main>
+  <section>
+    <div class="panel scope">
+      <h2>◈ 观测舱 <small>浏览器内宇宙</small></h2>
+      <div class="frame"></div>
+      <span class="tick tl">YOUR OWN TIMELINE</span><span class="tick tr" id="tick-clock">T+0</span>
+      <canvas id="world" width="640" height="640"></canvas>
+      <div class="stats">
+        <div class="stat"><b id="s-t">0</b><span>TICK</span></div>
+        <div class="stat"><b id="s-pop">0</b><span>人口</span></div>
+        <div class="stat gold"><b id="s-coop">0</b><span>合作基因</span></div>
+        <div class="stat"><b id="s-metab">0</b><span>代谢均值</span></div>
+      </div>
+      <div class="charts">
+        <canvas class="chart" id="ch-pop"></canvas>
+        <div class="row"><i style="background:var(--bluehi)"></i>人口 POPULATION（独立量纲）</div>
+        <canvas class="chart" id="ch-coop"></canvas>
+        <div class="row"><i style="background:var(--goldhi)"></i>合作基因 COOPERATION 0–1（独立量纲）</div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:24px">
+      <h2>◈ 干预实验台 <small>YOU ARE THE WEATHER</small></h2>
+      <div class="ctrl"><label>注入率</label><input type="range" id="r-regrow" min="0" max="80" value="8"><span class="val" id="v-regrow">8</span><button id="b-regrow">施加</button></div>
+      <div class="ctrl"><label>偷窃额</label><input type="range" id="r-steal" min="0" max="300" value="100"><span class="val" id="v-steal">100</span><button id="b-steal">施加</button></div>
+      <div class="btnrow">
+        <button onclick="uni.perturb(0.3); draw()">☄ 降下天灾 30%</button>
+        <button onclick="advance(500)">▶ 推进 500 tick</button>
+        <button onclick="advance(2000)">⏩ 推进 2000</button>
+        <button class="warn" onclick="if(confirm('重启这条时间线？')){ uni=new U({seed:Date.now()%100000}); draw(); }">↺ 重启宇宙</button>
+      </div>
+      <p class="hint"><b>拨杆即定律：</b>注入率拉到 0 —— E01 熵死（封闭必亡）；偷窃额从 50 拉过 75 —— A3 合作崩落（临界 ≈ 偷窃/红利 2.5）。这个宇宙此刻运行在你的浏览器里——你独享一条时间线，每一次干预都真实改写它的历史，没有剧本。</p>
+    </div>
+    <div class="panel" style="margin-top:24px">
+      <h2>◈ 公有宪章 <small>COMMONS</small></h2>
+      <div style="font-size:13px;color:var(--dim);line-height:1.9">
+        <p style="color:var(--ink);font-weight:600;letter-spacing:.05em">让民于利 · 利益公有 · 建造者零独占</p>
+        <p style="margin-top:6px">初始资金 <b style="color:var(--goldhi);font-family:var(--mono)">0 元</b>——本页托管在免费公共 CDN，引擎在你浏览器运行。定律、代码、数据全部公共领域。</p>
+        <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--bluehi);font-size:12.5px">阅读《公有宪章》全文</summary><pre id="commons-body" style="white-space:pre-wrap;color:var(--dim);font-size:12.5px;margin-top:8px;border-top:1px dashed #20284a;padding-top:10px"></pre></details>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:24px">
+      <h2>◈ 仪表 <small>THE RECORD</small></h2>
+      <div class="stats" style="grid-template-columns:repeat(3,1fr)">
+        <div class="stat"><b id="s-runs">—</b><span>实验运行</span></div>
+        <div class="stat"><b id="s-ticks">—</b><span>累计 TICK</span></div>
+        <div class="stat gold"><b id="s-epochs">—</b><span>重建纪元</span></div>
+      </div>
+    </div>
+  </section>
+  <section>
+    <div class="panel">
+      <h2>◈ 群策议事厅 <small>DEMOCRATIC LAB</small></h2>
+      <p class="hint" style="margin:0 0 12px"><b>没有门槛：</b>用一句大白话提出你对这个宇宙的疑问，或给已有猜想点赞。票数最高的猜想会被做成实验、跑出真实数据、写进法典——你的问题会成为宇宙的定律。全民群策，科学集中裁决。</p>
+      <a class="biglink" href="https://github.com/Li-Yu123456/aigc-universe/issues/new?title=%E7%8C%9C%E6%83%B3%EF%BC%9A...&labels=conjecture" target="_blank">✦ 提交我的猜想（一句话即可，免注册门槛见 Issue 区）</a>
+      <a class="biglink" style="margin-top:10px;color:var(--bluehi)" href="https://github.com/Li-Yu123456/aigc-universe/issues" target="_blank">◈ 浏览全部猜想 · 点赞投票（GitHub Issues = 永久公开议事厅）</a>
+    </div>
+    <div class="panel" style="margin-top:24px">
+      <h2>§ 定律法典 <small>THE CODE</small></h2>
+      <div id="laws">加载中…</div>
+    </div>
+    <div class="panel" style="margin-top:24px">
+      <h2>⌘ 纪元史 <small>THE CHRONICLE</small></h2>
+      <div id="epochs">加载中…</div>
+    </div>
+  </section>
+</main>
+<footer>
+  AIGC 宇宙观测站 · 引擎运行于你的浏览器（零服务器）· 宪章：算力守恒 / 算力有限 / 时间单向 / 空间有限 / 探究律 + 规则不可被借鉴，只能被发现<br>
+  定律一经立法不可修改，被出界击中只降级、不删除 · 一切数字来自可复算的原始日志 · 本站不表演结果，只报告数据
+</footer>
+<script src="universe.js"></script>
+<script src="static-data.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const U = window.Universe || (typeof module !== 'undefined' ? null : null);
+let uni = new Universe({ seed: 20261102 });
+
+function draw() {
+  const s = uni.snapshot(true);
+  const cv = $('world'), ctx = cv.getContext('2d');
+  const n = s.w, cw = cv.width / n;
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    const e = s.cells[y * n + x] / s.cellsMax;
+    const g = Math.round(10 + e * 76);
+    ctx.fillStyle = `rgb(${Math.round(g * .42)},${g},${Math.round(g * .72)})`;
+    ctx.fillRect(x * cw, y * cw, cw + .6, cw + .6);
+  }
+  const d = Math.max(2, cw * .78);
+  for (const a of s.dots) {
+    ctx.fillStyle = a[2] ? '#e9c76a' : '#e07684';
+    ctx.fillRect(a[0] % n * cw, a[1] % n * cw, d, d);
+  }
+  $('s-t').textContent = s.t; $('s-pop').textContent = s.pop;
+  $('s-coop').textContent = s.coopAvg; $('s-metab').textContent = s.metabAvg;
+  $('tick-clock').textContent = 'T+' + s.t;
+  line($('ch-pop'), s.history, (z) => z.pop);
+  line($('ch-coop'), s.history, (z) => z.coopAvg);
+}
+function line(cv, h, get) {
+  const dpr = 2; cv.width = cv.clientWidth * dpr; cv.height = cv.clientHeight * dpr;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  if (h.length < 2) return;
+  const max = Math.max(...h.map(get)) || 1;
+  const grad = ctx.createLinearGradient(0, 0, 0, cv.height);
+  grad.addColorStop(0, 'rgba(106,176,238,.3)'); grad.addColorStop(1, 'rgba(106,176,238,0)');
+  ctx.beginPath();
+  h.forEach((z, i) => {
+    const x = i / (h.length - 1) * cv.width;
+    const y = cv.height - (get(z) / max) * (cv.height - 14) - 7;
+    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  });
+  ctx.strokeStyle = cv.id === 'ch-pop' ? '#6ab0ee' : '#e3b23c';
+  ctx.lineWidth = 2.4; ctx.lineJoin = 'round'; ctx.stroke();
+  ctx.lineTo(cv.width, cv.height); ctx.lineTo(0, cv.height); ctx.closePath();
+  ctx.fillStyle = grad; ctx.fill();
+}
+function advance(n) {
+  let left = n;
+  const chunk = () => {
+    const t0 = performance.now();
+    while (left > 0 && performance.now() - t0 < 30 && uni.agents.length) { uni.step(); left--; }
+    draw();
+    if (left > 0) requestAnimationFrame(chunk);
+  };
+  requestAnimationFrame(chunk);
+}
+
+// 自动呼吸（每秒 5 tick）
+setInterval(() => { if (uni.agents.length) { for (let i = 0; i < 5; i++) uni.step(); draw(); } }, 1000);
+
+$('r-regrow').oninput = (e) => $('v-regrow').textContent = e.target.value;
+$('r-steal').oninput = (e) => $('v-steal').textContent = e.target.value;
+$('b-regrow').onclick = () => { uni.setRegrow(+$('r-regrow').value); draw(); };
+$('b-steal').onclick = () => { uni.setSteal(+$('r-steal').value); draw(); };
+
+// 静态数据渲染
+$('laws').innerHTML = STATIC.laws.map((l) => {
+  const stat = /已降级/.test(l.body) ? 'DOWNGRADED' : 'IN FORCE';
+  return `<details class="law"><summary>${l.file.replace('.md','')}<span class="tag">${stat}</span></summary><pre>${l.body.replace(/</g,'&lt;')}</pre></details>`;
+}).join('');
+$('h-laws').textContent = STATIC.laws.length;
+$('epochs').innerHTML = STATIC.epochs.map((e) =>
+  `<details class="epoch"><summary>${e.file.replace('.md','')}</summary><pre>${e.body.replace(/</g,'&lt;')}</pre></details>`).join('');
+$('s-epochs').textContent = STATIC.epochs.length;
+$('commons-body').textContent = STATIC.commons;
+$('s-runs').textContent = STATIC.stats.runs;
+$('s-ticks').textContent = (STATIC.stats.ticks / 10000).toFixed(1) + '万';
+for (let i = 0; i < 300; i++) uni.step();
+draw();
+</script>
+</body>
+</html>
